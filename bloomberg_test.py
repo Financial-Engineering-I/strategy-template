@@ -1,7 +1,6 @@
 # SimpleHistoryExample.py
-from hw2_utils import *
+from utils import *
 from bloomberg_functions import *
-import pickle
 
 def main():
     options = parseCmdLine()

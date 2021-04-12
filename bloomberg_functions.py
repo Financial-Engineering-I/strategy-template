@@ -16,10 +16,8 @@ if sys.version_info >= (3, 8) and plat.system().lower() == "windows":
         import blpapi
 else:
     import blpapi
-import re
-from hw2_utils import date_to_str
+from utils import date_to_str
 import pandas as pd
-import pickle
 
 def parseCmdLine():
     parser = OptionParser(description="Retrieve reference data.")
