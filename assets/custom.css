@@ -1,0 +1,7 @@
+.main-summary-table {
+  border: 1px solid black;
+  text-align: center
+}
+.main-summary-table > tr > th {
+  border: 1px solid black;
+}

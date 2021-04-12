@@ -308,12 +308,12 @@ def backtest(
         ivv_rtn = log(ivv_price_exit / ivv_price_enter)
 
         trade_rtn_per_trading_day = trade_rtn/trading_days_open
-        ivv_rtn_per_trading_day   = ivv_rtn / trading_days_open
+        benchmark_rtn_per_trading_day   = ivv_rtn/trading_days_open
 
         trade_ledger_row = [
             date_opened, date_closed, trading_days_open, buy_price, sell_price,
             ivv_price_enter, ivv_price_exit, trade_rtn, ivv_rtn,
-            trade_rtn_per_trading_day, ivv_rtn_per_trading_day
+            trade_rtn_per_trading_day, benchmark_rtn_per_trading_day
         ]
 
         trade_ledger.append(trade_ledger_row)

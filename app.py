@@ -19,6 +19,111 @@ app = dash.Dash(__name__)
 
 # Create the page layout
 app.layout = html.Div([
+    html.H1(
+        'Trading Strategy Example Template',
+        style={'display': 'block', 'text-align': 'center'}
+    ),
+    html.Div([
+        html.H2('Strategy'),
+        html.P('This app explores a simple strategy that works as follows:'),
+        html.Ol([
+            html.Li([
+                "While the market is not open, retrieve the past N days' " + \
+                "worth of data for:",
+                html.Ul([
+                    html.Li("IVV: daily open, high, low, & close prices"),
+                    html.Li(
+                        "US Treasury CMT Rates for 1 mo, 2 mo, 3 mo, 6 mo, " + \
+                        "1 yr and 2 yr maturities."
+                    )
+                ])
+            ]),
+            html.Li([
+                'Fit a linear trend line through the yield curve defined ' + \
+                'by the CMT rates and record in a dataframe:',
+                html.Ul([
+                    html.Li('the y-intercept ("a")'),
+                    html.Li('the slope ("b")'),
+                    html.Li('the coefficient of determination ("R^2")')
+                ]),
+                '...for the fitted line.'
+            ]),
+            html.Li(
+                'Repeat 2. for past CMT data to create a FEATURES ' + \
+                'dataframe containing historical values of a, b, and R^2 '
+            ),
+            html.Li(
+                'Add volatility of day-over-day log returns of IVV ' + \
+                'closing prices -- observed over the past N days -- to ' + \
+                'each historical data row in the FEATURES dataframe.'
+            ),
+            html.Li(
+                'Add RESPONSE data to the historical FEATURES dataframe.' + \
+                'The RESPONSE data includes information that communicates ' + \
+                'whether when, and how a limit order to SELL IVV at a ' + \
+                'price equal to (IVV Open Price of Next Trading Day) * ' + \
+                '(1 + alpha) would have filled over the next n trading days.'
+            ),
+            html.Li(
+                'Using the features a, b, R^2, and IVV vol alongside the ' + \
+                'RESPONSE data for the past N observed trading days, ' + \
+                'train a logistic regression. Use it to predict whether a ' + \
+                'limit order to SELL IVV at a price equal to (IVV Open ' + \
+                'Price of Next Trading Day) * (1 + alpha) would have ' + \
+                'filled over the next n trading days.'
+            ),
+            html.Li(
+                'If the regression in 6. predicts TRUE, submit two trades:'),
+            html.Ul([
+                html.Li(
+                    'A market order to BUY lot_size shares of IVV, which ' + \
+                    'fills at open price the next trading day.'
+                ),
+                html.Li(
+                    'A limit order to SELL lot_size shares of IVV at ' + \
+                    '(next day\'s opening price * (1+alpha)'
+                )
+            ]),
+            html.Li(
+                'If the limit order does not fill after n days, issue a ' + \
+                'market order to sell lot_size shares of IVV at close of ' + \
+                'the nth day.'
+            )
+        ])
+    ],
+        style={'display': 'inline-block', 'width': '50%'}
+    ),
+html.Div([
+        html.H2('Parameters'),
+        html.Ol([
+            html.Li(
+                "n: number of days a limit order to exit a position is " + \
+                "kept open"
+            ),
+            html.Li(
+                "N: number of observed historical trading days to use in " + \
+                "training the logistic regression model."
+            ),
+            html.Li(
+                'alpha: a percentage in numeric form ' + \
+                '(e.g., "0.02" == "2%") that defines the profit sought by ' + \
+                'entering a trade; for example, if IVV is bought at ' + \
+                'price X, then a limit order to sell the shares will be put' + \
+                ' in place at a price = X*(1+alpha)'
+            ),
+            html.Li(
+                'lot_size: number of shares traded in each round-trip ' + \
+                'trade. Kept constant for simplicity.'
+            ),
+            html.Li(
+                'date_range: Date range over which to perform the backtest.'
+            )
+        ])
+    ],
+        style={
+            'display': 'inline-block', 'width': '50%', 'vertical-align': 'top'
+        }
+    ),
     ##### Intermediate Variables (hidden in divs as JSON) ######################
     ############################################################################
     # Hidden div inside the app that stores IVV historical data
@@ -27,79 +132,92 @@ app.layout = html.Div([
     html.Div(id='bonds-hist', style={'display': 'none'}),
     ############################################################################
     ############################################################################
-    dcc.Graph(
-        id='alpha-beta',
-        style={'width': '50%', 'display': 'inline-block'}),
-    html.Table(
-        [html.Tr([
-            html.Th('Alpha'), html.Th('Beta'),
-            html.Th('Geometric Mean Return'),
-            html.Th('Volatility'), html.Th('Sharpe')
-        ])] + [html.Tr([
-            html.Td(html.Div(id='strategy-alpha')),
-            html.Td(html.Div(id='strategy-beta')),
-            html.Td(html.Div(id='strategy-gmrr')),
-            html.Td(html.Div(id='strategy-vol')),
-            html.Td(html.Div(id='strategy-sharpe'))
-        ])],
-        style={'display': 'inline-block'}
-    ),
-    ##### Parameters ###########################################################
-    ############################################################################
-    html.Table(
-        # Header
-        [html.Tr([
-            html.Th('Date Range'), html.Th('Bloomberg Identifier'),
-            html.Th('n'), html.Th('N'), html.Th('alpha'), html.Th('Lot Size'),
-            html.Th('Starting Cash')
-        ])] +
-        # Body
-        [html.Tr([
-            html.Td(
-                dcc.DatePickerRange(
-                    id='hist-data-range',
-                    min_date_allowed=date(2015, 1, 1),
-                    max_date_allowed=date.today(),
-                    initial_visible_month=date.today(),
-                    start_date=date(2019, 3, 16),
-                    end_date=date.today()
+    html.Div(
+        [
+        html.Div(
+            [
+                html.Table(
+                    [html.Tr([
+                        html.Th('Alpha'), html.Th('Beta'),
+                        html.Th('Geometric Mean Return'),
+                        html.Th('Volatility'), html.Th('Sharpe')
+                    ])] + [html.Tr([
+                        html.Td(html.Div(id='strategy-alpha')),
+                        html.Td(html.Div(id='strategy-beta')),
+                        html.Td(html.Div(id='strategy-gmrr')),
+                        html.Td(html.Div(id='strategy-vol')),
+                        html.Td(html.Div(id='strategy-sharpe'))
+                    ])],
+                    className='main-summary-table'
+                ),
+                ##### Parameters ###########################################################
+                ############################################################################
+                html.Table(
+                    # Header
+                    [html.Tr([
+                        html.Th('Date Range'), html.Th('Bloomberg Identifier'),
+                        html.Th('n'), html.Th('N'), html.Th('alpha'),
+                        html.Th('Lot Size'),
+                        html.Th('Starting Cash')
+                    ])] +
+                    # Body
+                    [html.Tr([
+                        html.Td(
+                            dcc.DatePickerRange(
+                                id='hist-data-range',
+                                min_date_allowed=date(2015, 1, 1),
+                                max_date_allowed=date.today(),
+                                initial_visible_month=date.today(),
+                                start_date=date(2019, 3, 16),
+                                end_date=date.today()
+                            )
+                        ),
+                        html.Td(dcc.Input(
+                            id='bbg-identifier-1', type="text",
+                            value="IVV US Equity",
+                            style={'text-align': 'center'}
+                        )),
+                        html.Td(
+                            dcc.Input(
+                                id='lil-n', type="number", value=5,
+                                style={'text-align': 'center', 'width': '30px'}
+                            )
+                        ),
+                        html.Td(
+                            dcc.Input(
+                                id='big-N', type="number", value=10,
+                                style={'text-align': 'center', 'width': '50px'}
+                            )
+                        ),
+                        html.Td(
+                            dcc.Input(
+                                id="alpha", type="number", value=0.02,
+                                style={'text-align': 'center', 'width': '50px'}
+                            )
+                        ),
+                        html.Td(
+                            dcc.Input(
+                                id="lot-size", type="number", value=100,
+                                style={'text-align': 'center', 'width': '50px'}
+                            )
+                        ),
+                        html.Td(
+                            dcc.Input(
+                                id="starting-cash", type="number", value=50000,
+                                style={'text-align': 'center', 'width': '100px'}
+                            )
+                        )
+                    ])]
                 )
-            ),
-            html.Td(dcc.Input(
-                id='bbg-identifier-1', type="text", value="IVV US Equity",
-                style={'text-align': 'center'}
-            )),
-            html.Td(
-                dcc.Input(
-                    id='lil-n', type="number", value=5,
-                    style={'text-align': 'center', 'width': '30px'}
-                )
-            ),
-            html.Td(
-                dcc.Input(
-                    id='big-N', type="number", value=10,
-                    style={'text-align': 'center', 'width': '50px'}
-                )
-            ),
-            html.Td(
-                dcc.Input(
-                    id="alpha", type="number", value=0.02,
-                    style={'text-align': 'center', 'width': '50px'}
-                )
-            ),
-            html.Td(
-                dcc.Input(
-                    id="lot-size", type="number", value=100,
-                    style={'text-align': 'center', 'width': '50px'}
-                )
-            ),
-            html.Td(
-                dcc.Input(
-                    id="starting-cash", type="number", value=50000,
-                    style={'text-align': 'center', 'width': '100px'}
-                )
-            )
-        ])]
+            ],
+            style={'display': 'inline-block', 'width': '50%'}
+        ),
+        html.Div(
+            [dcc.Graph(id='alpha-beta')],
+            style={'display': 'inline-block', 'width': '50%'}
+        )
+        ],
+        style={'display': 'block'}
     ),
     ##### Buttons ##############################################################
     ############################################################################
@@ -174,8 +292,16 @@ app.layout = html.Div([
             style_table={'height': '300px', 'overflowY': 'auto'}
         )
     ]),
-    dcc.Graph(id='bonds-3d-graph', style={'display': 'none'}),
-    dcc.Graph(id='candlestick', style={'display': 'none'}),
+    html.Div([
+        html.Div(
+            dcc.Graph(id='bonds-3d-graph', style={'display': 'none'}),
+            style={'display': 'inline-block', 'width': '50%'}
+        ),
+        html.Div(
+            dcc.Graph(id='candlestick', style={'display': 'none'}),
+            style={'display': 'inline-block', 'width': '50%'}
+        )
+    ]),
     html.Div(id='proposed-trade'),
     ############################################################################
     ############################################################################
@@ -222,11 +348,15 @@ def update_bbg_data(nclicks, bbg_id_1, N, n, start_date, end_date):
         date_output_msg = 'Select a date to see it displayed here'
 
     fig = go.Figure(
-        data=[go.Candlestick(x=historical_data['Date'],
-                             open=historical_data['Open'],
-                             high=historical_data['High'],
-                             low=historical_data['Low'],
-                             close=historical_data['Close'])]
+        data=[
+            go.Candlestick(
+                x     = historical_data['Date'],
+                open  = historical_data['Open'],
+                high  = historical_data['High'],
+                low   = historical_data['Low'],
+                close = historical_data['Close']
+            )
+        ]
     )
 
     return historical_data.to_json(), date_output_msg, fig, {'display': 'block'}
@@ -288,11 +418,7 @@ def update_bonds_hist(n_clicks, startDate, endDate, N, n):
             yaxis_title='Date',
             zaxis_title='APR (%)',
             zaxis=dict(ticksuffix='%')
-        ),
-        autosize=False,
-        width=1500,
-        height=500,
-        margin=dict(l=65, r=50, b=65, t=90)
+        )
     )
 
     bonds_data.reset_index(drop=True, inplace=True)
@@ -371,7 +497,7 @@ def calculate_backtest(ivv_hist, bonds_hist, n, N, alpha, lot_size,
     trade_ledger_columns = [
         dict(id='open_dt', name='Trade Opened'),
         dict(id='close_dt', name='Trade Closed'),
-        dict(id='trading_days', name='Num. Trading Days Open'),
+        dict(id='trading_days_open', name='Trading Days Open'),
         dict(id='buy_price', name='Entry Price', type='numeric',
              format=FormatTemplate.money(2)),
         dict(id='sell_price', name='Exit Price', type='numeric',
@@ -381,9 +507,9 @@ def calculate_backtest(ivv_hist, bonds_hist, n, N, alpha, lot_size,
         dict(id='benchmark_sell_price', name='Benchmark sell Price',
              type='numeric', format=FormatTemplate.money(2)),
         dict(id='trade_rtn', name='Return on Trade', type='numeric',
-             format=FormatTemplate.percentage(5)),
+             format=FormatTemplate.percentage(3)),
         dict(id='benchmark_rtn', name='Benchmark Return', type='numeric',
-             format=FormatTemplate.percentage(5)),
+             format=FormatTemplate.percentage(3)),
         dict(id='trade_rtn_per_trading_day', name='Trade Rtn / trd day',
              type='numeric', format=FormatTemplate.percentage(3)),
         dict(id='benchmark_rtn_per_trading_day', name='Benchmark Rtn / trd day',
@@ -424,10 +550,10 @@ def update_performance_metrics(trade_ledger):
         y='trade_rtn_per_trading_day'
     )
 
-    fig.add_traces(go.Scatter(x=x_range, y=y_range, name='Regression Fit'))
+    fig.add_traces(go.Scatter(x=x_range, y=y_range, name='OLS Fit'))
 
-    beta = linreg_model.coef_
-    alpha = linreg_model.intercept_
+    alpha = str(round(linreg_model.intercept_*100, 3)) + "% / trade"
+    beta = round(linreg_model.coef_[0], 3)
 
     gmrr = (trade_ledger['trade_rtn_per_trading_day'] + 1).product() ** (
                 1 / len(
@@ -435,9 +561,13 @@ def update_performance_metrics(trade_ledger):
 
     vol = stdev(trade_ledger['trade_rtn_per_trading_day'])
 
-    sharpe = gmrr / vol
+    sharpe = round(gmrr / vol, 3)
 
-    return fig, alpha, beta, gmrr, vol, sharpe
+    gmrr_str = str(round(gmrr, 3)) + "% / trade"
+
+    vol_str = str(round(vol, 3)) + "% / trade"
+
+    return fig, alpha, beta, gmrr_str, vol_str, sharpe
 
 # Run it!
 if __name__ == '__main__':
