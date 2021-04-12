@@ -93,7 +93,7 @@ app.layout = html.Div([
     ],
         style={'display': 'inline-block', 'width': '50%'}
     ),
-html.Div([
+    html.Div([
         html.H2('Parameters'),
         html.Ol([
             html.Li(
@@ -118,7 +118,18 @@ html.Div([
             html.Li(
                 'date_range: Date range over which to perform the backtest.'
             )
-        ])
+        ]),
+        html.H2('Data Note & Disclaimer'),
+        html.P(
+            'This Dash app makes use of Bloomberg\'s Python API to append ' + \
+            'the latest historical data to what\'s already provided in the ' + \
+            '.csv files in the directory \'bbg_data\'. These initial data ' + \
+            'files were compiled using publicly available information on ' + \
+            'the Internet and do not contain historical stock market data ' + \
+            'from Bloomberg. This app does NOT need a Bloomberg ' + \
+            'subscription to work -- only to update data. Always know and ' + \
+            'obey your data stewardship obligations!'
+        )
     ],
         style={
             'display': 'inline-block', 'width': '50%', 'vertical-align': 'top'
