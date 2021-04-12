@@ -180,7 +180,7 @@ app.layout = html.Div([
                                 max_date_allowed=date.today(),
                                 initial_visible_month=date.today(),
                                 start_date=date(2019, 3, 16),
-                                end_date=date.today()
+                                end_date=date(2021, 4, 12)
                             )
                         ),
                         html.Td(dcc.Input(

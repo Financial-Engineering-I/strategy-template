@@ -6,6 +6,34 @@ from math import log, isnan
 from statistics import stdev
 from numpy import repeat
 
+def trading_decision(
+        exit_date, response_var, features_and_responses, trading_date, N, n
+):
+    training_indices = features_and_responses[exit_date] < trading_date
+    training_X = features_and_responses[training_indices].tail(N)[
+        ['a', 'b', 'R2', 'ivv_vol']
+    ]
+    training_Y = features_and_responses[training_indices].tail(N)[response_var]
+
+    # Need at least two 1's to train a model
+    if sum(training_Y) < 2:
+        return
+
+    if sum(training_Y) < n:
+        logisticRegr = linear_model.LogisticRegression()
+        logisticRegr.fit(np.float64(training_X), np.float64(training_Y))
+        trade_decision = logisticRegr.predict(
+            np.float64(
+                features_and_responses[["a", "b", "R2", "ivv_vol"]][
+                    features_and_responses['Date'] == trading_date
+                    ]
+            )
+        ).item()
+    else:     # If EVERYTHING is a 1, then just go ahead and implement again.
+        trade_decision = 1
+
+    return trade_decision
+
 def backtest(
         ivv_hist, bonds_hist, n, N, alpha, lot_size, start_date, end_date,
         starting_cash
@@ -133,35 +161,13 @@ def backtest(
     for trading_date in features_and_responses['Date'][
         features_and_responses['Date'] >= pd.to_datetime(start_date)
     ]:
-        # can't use it if the result hasn't been observed.
-        training_indices = features_and_responses[
-                               'exit_date_long'] < trading_date
-        training_X = features_and_responses[training_indices].tail(N)[
-            ['a', 'b', 'R2', 'ivv_vol']
-        ]
-        training_Y = features_and_responses[training_indices].tail(N)[
-            'long_success'
-        ]
+        trade_decision_long = trading_decision(
+            'exit_date_long', 'long_success', features_and_responses,
+            trading_date, N, n
+        )
 
-        # Need at least two 1's to train a model
-        if sum(training_Y) < 2:
-            continue
 
-        # If EVERYTHING is a 1, then just go ahead and BUY.
-        if sum(training_Y) < n:
-            logisticRegr = linear_model.LogisticRegression()
-            logisticRegr.fit(np.float64(training_X), np.float64(training_Y))
-            trade_decision = logisticRegr.predict(
-                np.float64(
-                    features_and_responses[["a", "b", "R2", "ivv_vol"]][
-                        features_and_responses['Date'] == trading_date
-                        ]
-                )
-            ).item()
-        else:
-            trade_decision = 1
-
-        if bool(trade_decision):
+        if bool(trade_decision_long):
 
             right_answer = features_and_responses[
                 features_and_responses['Date'] == trading_date
