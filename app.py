@@ -13,6 +13,7 @@ from backtest import *
 from bloomberg_functions import req_historical_data
 import numpy as np
 from sklearn import linear_model
+from statistics import mean
 
 # Create a Dash app
 app = dash.Dash(__name__)
@@ -94,6 +95,17 @@ app.layout = html.Div([
         style={'display': 'inline-block', 'width': '50%'}
     ),
     html.Div([
+        html.H2('Data Note & Disclaimer'),
+        html.P(
+            'This Dash app makes use of Bloomberg\'s Python API to append ' + \
+            'the latest historical data to what\'s already provided in the ' + \
+            '.csv files in the directory \'bbg_data\'. These initial data ' + \
+            'files were compiled using publicly available information on ' + \
+            'the Internet and do not contain historical stock market data ' + \
+            'from Bloomberg. This app does NOT need a Bloomberg ' + \
+            'subscription to work -- only to update data. Always know and ' + \
+            'obey your data stewardship obligations!'
+        ),
         html.H2('Parameters'),
         html.Ol([
             html.Li(
@@ -119,16 +131,98 @@ app.layout = html.Div([
                 'date_range: Date range over which to perform the backtest.'
             )
         ]),
-        html.H2('Data Note & Disclaimer'),
-        html.P(
-            'This Dash app makes use of Bloomberg\'s Python API to append ' + \
-            'the latest historical data to what\'s already provided in the ' + \
-            '.csv files in the directory \'bbg_data\'. These initial data ' + \
-            'files were compiled using publicly available information on ' + \
-            'the Internet and do not contain historical stock market data ' + \
-            'from Bloomberg. This app does NOT need a Bloomberg ' + \
-            'subscription to work -- only to update data. Always know and ' + \
-            'obey your data stewardship obligations!'
+        html.Div(
+            [
+                html.Div(
+                    [
+                        html.Button(
+                            "RUN BACKTEST", id='run-backtest', n_clicks=0
+                        ),
+                        html.Table(
+                            [html.Tr([
+                                html.Th('Alpha'), html.Th('Beta'),
+                                html.Th('Geometric Mean Return'),
+                                html.Th('Average Trades per Year'),
+                                html.Th('Volatility'), html.Th('Sharpe')
+                            ])] + [html.Tr([
+                                html.Td(html.Div(id='strategy-alpha')),
+                                html.Td(html.Div(id='strategy-beta')),
+                                html.Td(html.Div(id='strategy-gmrr')),
+                                html.Td(html.Div(id='strategy-trades-per-yr')),
+                                html.Td(html.Div(id='strategy-vol')),
+                                html.Td(html.Div(id='strategy-sharpe'))
+                            ])],
+                            className='main-summary-table'
+                        ),
+                        html.Table(
+                            # Header
+                            [html.Tr([
+                                html.Th('Date Range'),
+                                html.Th('Bloomberg Identifier'),
+                                html.Th('n'), html.Th('N'), html.Th('alpha'),
+                                html.Th('Lot Size'),
+                                html.Th('Starting Cash')
+                            ])] +
+                            # Body
+                            [html.Tr([
+                                html.Td(
+                                    dcc.DatePickerRange(
+                                        id='hist-data-range',
+                                        min_date_allowed=date(2015, 1, 1),
+                                        max_date_allowed=date.today(),
+                                        initial_visible_month=date.today(),
+                                        start_date=date(2019, 3, 16),
+                                        end_date=date(2021, 4, 12)
+                                    )
+                                ),
+                                html.Td(dcc.Input(
+                                    id='bbg-identifier-1', type="text",
+                                    value="IVV US Equity",
+                                    style={'text-align': 'center'}
+                                )),
+                                html.Td(
+                                    dcc.Input(
+                                        id='lil-n', type="number", value=5,
+                                        style={'text-align': 'center',
+                                               'width': '30px'}
+                                    )
+                                ),
+                                html.Td(
+                                    dcc.Input(
+                                        id='big-N', type="number", value=10,
+                                        style={'text-align': 'center',
+                                               'width': '50px'}
+                                    )
+                                ),
+                                html.Td(
+                                    dcc.Input(
+                                        id="alpha", type="number", value=0.02,
+                                        style={'text-align': 'center',
+                                               'width': '50px'}
+                                    )
+                                ),
+                                html.Td(
+                                    dcc.Input(
+                                        id="lot-size", type="number", value=100,
+                                        style={'text-align': 'center',
+                                               'width': '50px'}
+                                    )
+                                ),
+                                html.Td(
+                                    dcc.Input(
+                                        id="starting-cash", type="number",
+                                        value=50000,
+                                        style={'text-align': 'center',
+                                               'width': '100px'}
+                                    )
+                                )
+                            ])]
+                        )
+                    ],
+                    style={'display': 'inline-block', 'width': '50%'}
+                )
+            ],
+            style={'display': 'block'}
         )
     ],
         style={
@@ -144,97 +238,9 @@ app.layout = html.Div([
     ############################################################################
     ############################################################################
     html.Div(
-        [
-        html.Div(
-            [
-                html.Table(
-                    [html.Tr([
-                        html.Th('Alpha'), html.Th('Beta'),
-                        html.Th('Geometric Mean Return'),
-                        html.Th('Volatility'), html.Th('Sharpe')
-                    ])] + [html.Tr([
-                        html.Td(html.Div(id='strategy-alpha')),
-                        html.Td(html.Div(id='strategy-beta')),
-                        html.Td(html.Div(id='strategy-gmrr')),
-                        html.Td(html.Div(id='strategy-vol')),
-                        html.Td(html.Div(id='strategy-sharpe'))
-                    ])],
-                    className='main-summary-table'
-                ),
-                ##### Parameters ###########################################################
-                ############################################################################
-                html.Table(
-                    # Header
-                    [html.Tr([
-                        html.Th('Date Range'), html.Th('Bloomberg Identifier'),
-                        html.Th('n'), html.Th('N'), html.Th('alpha'),
-                        html.Th('Lot Size'),
-                        html.Th('Starting Cash')
-                    ])] +
-                    # Body
-                    [html.Tr([
-                        html.Td(
-                            dcc.DatePickerRange(
-                                id='hist-data-range',
-                                min_date_allowed=date(2015, 1, 1),
-                                max_date_allowed=date.today(),
-                                initial_visible_month=date.today(),
-                                start_date=date(2019, 3, 16),
-                                end_date=date(2021, 4, 12)
-                            )
-                        ),
-                        html.Td(dcc.Input(
-                            id='bbg-identifier-1', type="text",
-                            value="IVV US Equity",
-                            style={'text-align': 'center'}
-                        )),
-                        html.Td(
-                            dcc.Input(
-                                id='lil-n', type="number", value=5,
-                                style={'text-align': 'center', 'width': '30px'}
-                            )
-                        ),
-                        html.Td(
-                            dcc.Input(
-                                id='big-N', type="number", value=10,
-                                style={'text-align': 'center', 'width': '50px'}
-                            )
-                        ),
-                        html.Td(
-                            dcc.Input(
-                                id="alpha", type="number", value=0.02,
-                                style={'text-align': 'center', 'width': '50px'}
-                            )
-                        ),
-                        html.Td(
-                            dcc.Input(
-                                id="lot-size", type="number", value=100,
-                                style={'text-align': 'center', 'width': '50px'}
-                            )
-                        ),
-                        html.Td(
-                            dcc.Input(
-                                id="starting-cash", type="number", value=50000,
-                                style={'text-align': 'center', 'width': '100px'}
-                            )
-                        )
-                    ])]
-                )
-            ],
-            style={'display': 'inline-block', 'width': '50%'}
-        ),
-        html.Div(
-            [dcc.Graph(id='alpha-beta')],
-            style={'display': 'inline-block', 'width': '50%'}
-        )
-        ],
-        style={'display': 'block'}
+        [dcc.Graph(id='alpha-beta')],
+        style={'display': 'inline-block', 'width': '50%'}
     ),
-    ##### Buttons ##############################################################
-    ############################################################################
-    html.Button("RUN BACKTEST", id='run-backtest', n_clicks=0),
-    ############################################################################
-    ############################################################################
     # Display the current selected date range
     html.Div(id='date-range-output'),
     html.Div([
@@ -361,11 +367,11 @@ def update_bbg_data(nclicks, bbg_id_1, N, n, start_date, end_date):
     fig = go.Figure(
         data=[
             go.Candlestick(
-                x     = historical_data['Date'],
-                open  = historical_data['Open'],
-                high  = historical_data['High'],
-                low   = historical_data['Low'],
-                close = historical_data['Close']
+                x=historical_data['Date'],
+                open=historical_data['Open'],
+                high=historical_data['High'],
+                low=historical_data['Low'],
+                close=historical_data['Close']
             )
         ]
     )
@@ -474,6 +480,7 @@ def calculate_backtest(ivv_hist, bonds_hist, n, N, alpha, lot_size,
     blotter = blotter.to_dict('records')
     blotter_columns = [
         dict(id='ID', name='ID'),
+        dict(id='ls', name='long/short'),
         dict(id='submitted', name='Created'),
         dict(id='action', name='Action'),
         dict(id='size', name='Size'),
@@ -532,12 +539,14 @@ def calculate_backtest(ivv_hist, bonds_hist, n, N, alpha, lot_size,
            blotter_columns, calendar_ledger, calendar_ledger_columns, \
            trade_ledger, trade_ledger_columns
 
+
 @app.callback(
     [
         dash.dependencies.Output('alpha-beta', 'figure'),
         dash.dependencies.Output('strategy-alpha', 'children'),
         dash.dependencies.Output('strategy-beta', 'children'),
         dash.dependencies.Output('strategy-gmrr', 'children'),
+        dash.dependencies.Output('strategy-trades-per-yr', 'children'),
         dash.dependencies.Output('strategy-vol', 'children'),
         dash.dependencies.Output('strategy-sharpe', 'children')
     ],
@@ -558,18 +567,26 @@ def update_performance_metrics(trade_ledger):
 
     fig = px.scatter(
         trade_ledger,
+        title="Performance against Benchmark",
         x='benchmark_rtn_per_trading_day',
         y='trade_rtn_per_trading_day'
     )
 
     fig.add_traces(go.Scatter(x=x_range, y=y_range, name='OLS Fit'))
 
-    alpha = str(round(linreg_model.intercept_*100, 3)) + "% / trade"
+    alpha = str(round(linreg_model.intercept_ * 100, 3)) + "% / trade"
     beta = round(linreg_model.coef_[0], 3)
 
     gmrr = (trade_ledger['trade_rtn_per_trading_day'] + 1).product() ** (
-                1 / len(
-            trade_ledger)) - 1
+            1 / len(
+        trade_ledger)) - 1
+
+    avg_trades_per_yr = round(
+        trade_ledger['open_dt'].groupby(
+            pd.DatetimeIndex(trade_ledger['open_dt']).year
+        ).agg('count').mean(),
+        0
+    )
 
     vol = stdev(trade_ledger['trade_rtn_per_trading_day'])
 
@@ -579,7 +596,8 @@ def update_performance_metrics(trade_ledger):
 
     vol_str = str(round(vol, 3)) + "% / trade"
 
-    return fig, alpha, beta, gmrr_str, vol_str, sharpe
+    return fig, alpha, beta, gmrr_str, avg_trades_per_yr, vol_str, sharpe
+
 
 # Run it!
 if __name__ == '__main__':

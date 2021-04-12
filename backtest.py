@@ -17,7 +17,7 @@ def trading_decision(
 
     # Need at least two 1's to train a model
     if sum(training_Y) < 2:
-        return
+        return 0
 
     if sum(training_Y) < n:
         logisticRegr = linear_model.LogisticRegression()
@@ -170,8 +170,12 @@ def backtest(
             trading_date, N, n
         )
 
-        if trade_decision_long == 1:
+        trade_sum = trade_decision_short + trade_decision_long
 
+        if trade_sum == 0 or trade_sum == 2:
+            continue
+
+        if trade_decision_long == 1:
             right_answer = features_and_responses[
                 features_and_responses['Date'] == trading_date
                 ]
@@ -186,8 +190,9 @@ def backtest(
                 order_status = 'FILLED'
 
             entry_trade_mkt = [
-                trade_id, submitted, 'BUY', lot_size, 'IVV', order_price, 'MKT',
-                order_status, fill_price, filled_or_cancelled
+                trade_id, 'L', submitted, 'BUY', lot_size, 'IVV',
+                order_price, 'MKT', order_status, fill_price,
+                filled_or_cancelled
             ]
 
             long_success = right_answer['long_success'].item()
@@ -205,9 +210,10 @@ def backtest(
                 order_status = 'CANCELLED'
                 fill_price = None
                 exit_trade_mkt = [
-                    trade_id, filled_or_cancelled, 'SELL', lot_size, 'IVV',
-                    right_answer['exit_price_long'].item(), 'MKT', 'FILLED',
-                    right_answer['exit_price_long'].item(), filled_or_cancelled
+                    trade_id, 'L', filled_or_cancelled, 'SELL', lot_size,
+                    'IVV', right_answer['exit_price_long'].item(), 'MKT',
+                    'FILLED', right_answer['exit_price_long'].item(),
+                    filled_or_cancelled
                 ]
                 blotter.append(exit_trade_mkt)
 
@@ -216,8 +222,65 @@ def backtest(
                 fill_price = right_answer['exit_price_long'].item()
 
             exit_trade_lmt = [
-                trade_id, submitted, 'SELL', lot_size, 'IVV', order_price,
-                'LIMIT', order_status, fill_price, filled_or_cancelled
+                trade_id, 'L', submitted, 'SELL', lot_size, 'IVV',
+                order_price, 'LIMIT', order_status, fill_price,
+                filled_or_cancelled
+            ]
+
+            blotter.append(entry_trade_mkt)
+            blotter.append(exit_trade_lmt)
+            trade_id += 1
+
+        elif trade_decision_short == 1:
+            right_answer = features_and_responses[
+                features_and_responses['Date'] == trading_date
+                ]
+
+            if trading_date == features_and_responses['Date'].tail(1).item():
+                order_status = 'PENDING'
+                submitted = order_price = fill_price = filled_or_cancelled = None
+            else:
+                submitted = filled_or_cancelled = right_answer[
+                    'entry_date'].item()
+                order_price = fill_price = right_answer['entry_price'].item()
+                order_status = 'FILLED'
+
+            entry_trade_mkt = [
+                trade_id, 'S', submitted, 'SELL', lot_size, 'IVV',
+                order_price, 'MKT', order_status, fill_price,
+                filled_or_cancelled
+            ]
+
+            short_success = right_answer['short_success'].item()
+
+            if isnan(short_success):
+                order_status = 'OPEN'
+                fill_price = filled_or_cancelled = None
+
+            filled_or_cancelled = right_answer['exit_date_short'].item()
+
+            if isinstance(order_price, float):
+                order_price = order_price * (1-alpha)
+
+            if short_success == 0:
+                order_status = 'CANCELLED'
+                fill_price = None
+                exit_trade_mkt = [
+                    trade_id, 'S', filled_or_cancelled, 'BUY', lot_size,
+                    'IVV', right_answer['exit_price_short'].item(), 'MKT',
+                    'FILLED', right_answer['exit_price_short'].item(),
+                    filled_or_cancelled
+                ]
+                blotter.append(exit_trade_mkt)
+
+            if short_success == 1:
+                order_status = 'FILLED'
+                fill_price = right_answer['exit_price_short'].item()
+
+            exit_trade_lmt = [
+                trade_id, 'S', submitted, 'BUY', lot_size, 'IVV',
+                order_price, 'LIMIT', order_status, fill_price,
+                filled_or_cancelled
             ]
 
             blotter.append(entry_trade_mkt)
@@ -226,7 +289,7 @@ def backtest(
 
     blotter = pd.DataFrame(blotter)
     blotter.columns = [
-        'ID', 'submitted', 'action', 'size', 'symbol', 'price', 'type',
+        'ID', 'ls', 'submitted', 'action', 'size', 'symbol', 'price', 'type',
         'status', 'fill_price', 'filled_or_cancelled'
     ]
     blotter = blotter.round(2)
@@ -235,6 +298,7 @@ def backtest(
         inplace=True,
         ascending=[False, True]
     )
+    blotter.reset_index()
 
     calendar_ledger = []
     cash = starting_cash
@@ -294,7 +358,7 @@ def backtest(
         if len(round_trip_trade) < 2:
             continue
 
-        trade_id = int(round_trip_trade['ID'].unique())
+        trade_id = round_trip_trade['ID'].unique().item()
 
         date_opened = min(round_trip_trade['submitted'])
         date_closed = max(round_trip_trade['submitted'])
@@ -312,8 +376,16 @@ def backtest(
             round_trip_trade['action'] == 'SELL'
             ].item()
 
-        ivv_price_enter = ivv_df['Close'].head(1).item()
-        ivv_price_exit = ivv_df['Close'].tail(1).item()
+        ivv_price_enter = ivv_df['Close'][
+            ivv_df['Date'] == round_trip_trade['submitted'][
+                round_trip_trade['action'] == 'BUY'
+            ].item()
+        ].item()
+        ivv_price_exit = ivv_df['Close'][
+            ivv_df['Date'] == round_trip_trade['submitted'][
+                round_trip_trade['action'] == 'SELL'
+            ].item()
+        ].item()
 
         trade_rtn = log(sell_price / buy_price)
         ivv_rtn = log(ivv_price_exit / ivv_price_enter)
