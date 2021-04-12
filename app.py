@@ -506,6 +506,7 @@ def calculate_backtest(ivv_hist, bonds_hist, n, N, alpha, lot_size,
 
     trade_ledger = trade_ledger.to_dict('records')
     trade_ledger_columns = [
+        dict(id='trade_id', name="ID"),
         dict(id='open_dt', name='Trade Opened'),
         dict(id='close_dt', name='Trade Closed'),
         dict(id='trading_days_open', name='Trading Days Open'),

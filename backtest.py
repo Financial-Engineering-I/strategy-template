@@ -165,9 +165,12 @@ def backtest(
             'exit_date_long', 'long_success', features_and_responses,
             trading_date, N, n
         )
+        trade_decision_short = trading_decision(
+            'exit_date_short', 'short_success', features_and_responses,
+            trading_date, N, n
+        )
 
-
-        if bool(trade_decision_long):
+        if trade_decision_long == 1:
 
             right_answer = features_and_responses[
                 features_and_responses['Date'] == trading_date
@@ -291,6 +294,8 @@ def backtest(
         if len(round_trip_trade) < 2:
             continue
 
+        trade_id = int(round_trip_trade['ID'].unique())
+
         date_opened = min(round_trip_trade['submitted'])
         date_closed = max(round_trip_trade['submitted'])
 
@@ -317,8 +322,8 @@ def backtest(
         benchmark_rtn_per_trading_day   = ivv_rtn/trading_days_open
 
         trade_ledger_row = [
-            date_opened, date_closed, trading_days_open, buy_price, sell_price,
-            ivv_price_enter, ivv_price_exit, trade_rtn, ivv_rtn,
+            trade_id, date_opened, date_closed, trading_days_open, buy_price,
+            sell_price, ivv_price_enter, ivv_price_exit, trade_rtn, ivv_rtn,
             trade_rtn_per_trading_day, benchmark_rtn_per_trading_day
         ]
 
@@ -326,9 +331,9 @@ def backtest(
 
     trade_ledger = pd.DataFrame(trade_ledger)
     trade_ledger.columns = [
-        'open_dt', 'close_dt', 'trading_days_open', 'buy_price', 'sell_price',
-        'benchmark_buy_price', 'benchmark_sell_price', 'trade_rtn',
-        'benchmark_rtn', 'trade_rtn_per_trading_day',
+        'trade_id', 'open_dt', 'close_dt', 'trading_days_open', 'buy_price',
+        'sell_price', 'benchmark_buy_price', 'benchmark_sell_price',
+        'trade_rtn', 'benchmark_rtn', 'trade_rtn_per_trading_day',
         'benchmark_rtn_per_trading_day'
     ]
 
