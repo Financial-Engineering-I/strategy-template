@@ -165,15 +165,15 @@ def backtest(
             'exit_date_long', 'long_success', features_and_responses,
             trading_date, N, n
         )
-        trade_decision_short = trading_decision(
-            'exit_date_short', 'short_success', features_and_responses,
-            trading_date, N, n
-        )
+        # trade_decision_short = trading_decision(
+        #     'exit_date_short', 'short_success', features_and_responses,
+        #     trading_date, N, n
+        # )
 
-        trade_sum = trade_decision_short + trade_decision_long
+        # trade_sum = trade_decision_short + trade_decision_long
 
-        if trade_sum == 0 or trade_sum == 2:
-            continue
+        # if trade_sum == 0 or trade_sum == 2:
+        #     continue
 
         if trade_decision_long == 1:
             right_answer = features_and_responses[
@@ -231,61 +231,61 @@ def backtest(
             blotter.append(exit_trade_lmt)
             trade_id += 1
 
-        elif trade_decision_short == 1:
-            right_answer = features_and_responses[
-                features_and_responses['Date'] == trading_date
-                ]
-
-            if trading_date == features_and_responses['Date'].tail(1).item():
-                order_status = 'PENDING'
-                submitted = order_price = fill_price = filled_or_cancelled = None
-            else:
-                submitted = filled_or_cancelled = right_answer[
-                    'entry_date'].item()
-                order_price = fill_price = right_answer['entry_price'].item()
-                order_status = 'FILLED'
-
-            entry_trade_mkt = [
-                trade_id, 'S', submitted, 'SELL', lot_size, 'IVV',
-                order_price, 'MKT', order_status, fill_price,
-                filled_or_cancelled
-            ]
-
-            short_success = right_answer['short_success'].item()
-
-            if isnan(short_success):
-                order_status = 'OPEN'
-                fill_price = filled_or_cancelled = None
-
-            filled_or_cancelled = right_answer['exit_date_short'].item()
-
-            if isinstance(order_price, float):
-                order_price = order_price * (1-alpha)
-
-            if short_success == 0:
-                order_status = 'CANCELLED'
-                fill_price = None
-                exit_trade_mkt = [
-                    trade_id, 'S', filled_or_cancelled, 'BUY', lot_size,
-                    'IVV', right_answer['exit_price_short'].item(), 'MKT',
-                    'FILLED', right_answer['exit_price_short'].item(),
-                    filled_or_cancelled
-                ]
-                blotter.append(exit_trade_mkt)
-
-            if short_success == 1:
-                order_status = 'FILLED'
-                fill_price = right_answer['exit_price_short'].item()
-
-            exit_trade_lmt = [
-                trade_id, 'S', submitted, 'BUY', lot_size, 'IVV',
-                order_price, 'LIMIT', order_status, fill_price,
-                filled_or_cancelled
-            ]
-
-            blotter.append(entry_trade_mkt)
-            blotter.append(exit_trade_lmt)
-            trade_id += 1
+        # elif trade_decision_short == 1:
+        #     right_answer = features_and_responses[
+        #         features_and_responses['Date'] == trading_date
+        #         ]
+        #
+        #     if trading_date == features_and_responses['Date'].tail(1).item():
+        #         order_status = 'PENDING'
+        #         submitted = order_price = fill_price = filled_or_cancelled = None
+        #     else:
+        #         submitted = filled_or_cancelled = right_answer[
+        #             'entry_date'].item()
+        #         order_price = fill_price = right_answer['entry_price'].item()
+        #         order_status = 'FILLED'
+        #
+        #     entry_trade_mkt = [
+        #         trade_id, 'S', submitted, 'SELL', lot_size, 'IVV',
+        #         order_price, 'MKT', order_status, fill_price,
+        #         filled_or_cancelled
+        #     ]
+        #
+        #     short_success = right_answer['short_success'].item()
+        #
+        #     if isnan(short_success):
+        #         order_status = 'OPEN'
+        #         fill_price = filled_or_cancelled = None
+        #
+        #     filled_or_cancelled = right_answer['exit_date_short'].item()
+        #
+        #     if isinstance(order_price, float):
+        #         order_price = order_price * (1-alpha)
+        #
+        #     if short_success == 0:
+        #         order_status = 'CANCELLED'
+        #         fill_price = None
+        #         exit_trade_mkt = [
+        #             trade_id, 'S', filled_or_cancelled, 'BUY', lot_size,
+        #             'IVV', right_answer['exit_price_short'].item(), 'MKT',
+        #             'FILLED', right_answer['exit_price_short'].item(),
+        #             filled_or_cancelled
+        #         ]
+        #         blotter.append(exit_trade_mkt)
+        #
+        #     if short_success == 1:
+        #         order_status = 'FILLED'
+        #         fill_price = right_answer['exit_price_short'].item()
+        #
+        #     exit_trade_lmt = [
+        #         trade_id, 'S', submitted, 'BUY', lot_size, 'IVV',
+        #         order_price, 'LIMIT', order_status, fill_price,
+        #         filled_or_cancelled
+        #     ]
+        #
+        #     blotter.append(entry_trade_mkt)
+        #     blotter.append(exit_trade_lmt)
+        #     trade_id += 1
 
     blotter = pd.DataFrame(blotter)
     blotter.columns = [
