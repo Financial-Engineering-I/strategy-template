@@ -10,12 +10,9 @@ from optparse import OptionParser
 import os
 import platform as plat
 import sys
-if sys.version_info >= (3, 8) and plat.system().lower() == "windows":
-    # pylint: disable=no-member
-    with os.add_dll_directory(os.getenv('BLPAPI_LIBDIR')):
-        import blpapi
-else:
+with os.add_dll_directory('C:\\blp\\BloombergWindowsSDK\\C++API\\v3.16.1.1\\lib'):
     import blpapi
+
 from utils import date_to_str
 import pandas as pd
 
