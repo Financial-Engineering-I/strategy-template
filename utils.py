@@ -6,6 +6,11 @@ import requests
 from bs4 import BeautifulSoup
 from datetime import date
 
+def quick_date_cols(df, colnames):
+    for col in colnames:
+        df[col] = pd.to_datetime(df[col]).dt.date
+    return df
+
 def date_to_str(date_obj, format = "%Y-%m-%d"):
     return date.strftime(pd.to_datetime(date_obj).date(), format)
 

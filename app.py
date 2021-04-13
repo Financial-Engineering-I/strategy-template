@@ -465,8 +465,10 @@ def update_bonds_hist(n_clicks, startDate, endDate, N, n):
      dash.dependencies.State('hist-data-range', 'end_date')],
     prevent_initial_call=True
 )
-def calculate_backtest(ivv_hist, bonds_hist, n, N, alpha, lot_size,
-                       starting_cash, start_date, end_date):
+def calculate_backtest(
+        ivv_hist, bonds_hist, n, N, alpha, lot_size, starting_cash,
+        start_date, end_date
+):
     features_and_responses, blotter, calendar_ledger, trade_ledger = backtest(
         ivv_hist, bonds_hist, n, N, alpha, lot_size, start_date, end_date,
         starting_cash

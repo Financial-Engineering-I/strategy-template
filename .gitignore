@@ -126,7 +126,4 @@ venv/
 .idea/
 
 #app
-blotter.csv
-calendar_ledger.csv
-features_and_responses.csv
-trade_ledger.csv
+app_data/
