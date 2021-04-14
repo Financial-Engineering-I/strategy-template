@@ -22,8 +22,8 @@ def calc_features(ivv_hist, bonds_hist, n_vol):
         linreg_model = linear_model.LinearRegression()
         linreg_model.fit(maturities, yields_row[1:])
         modeled_bond_rates = linreg_model.predict(maturities)
-        return [yields_row["Date"], linreg_model.coef_[0],
-                linreg_model.intercept_,
+        return [yields_row["Date"], linreg_model.intercept_,
+                linreg_model.coef_[0],
                 r2_score(yields_row[1:], modeled_bond_rates)]
 
     # apply bonds_fun to every row in bonds_hist to make the features dataframe.
@@ -39,7 +39,8 @@ def calc_features(ivv_hist, bonds_hist, n_vol):
 
     for dt in ivv_hist['Date'][n_vol:]:
         eod_close_prices = list(
-            ivv_hist['Close'][ivv_hist['Date'] <= dt].tail(n_vol))
+            ivv_hist['Close'][ivv_hist['Date'] <= dt].tail(n_vol)
+        )
         vol = stdev([
             log(i / j) for i, j in zip(
                 eod_close_prices[:n_vol - 1], eod_close_prices[1:]
