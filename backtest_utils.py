@@ -188,7 +188,7 @@ def calc_blotter(features_and_responses, start_date, end_date, n, N, lot_size):
                 filled_or_cancelled = right_answer['exit_date'].item()
                 # Don't forget the market order to close position:
                 exit_trade_mkt = [
-                    trade_id, 'L', submitted, 'SELL', lot_size, 'IVV',
+                    trade_id, 'L', filled_or_cancelled, 'SELL', lot_size, 'IVV',
                     right_answer['exit_price'].item(), 'MKT', 'FILLED',
                     right_answer['exit_price'].item(), filled_or_cancelled
                 ]
