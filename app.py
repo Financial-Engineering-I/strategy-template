@@ -7,13 +7,10 @@ import dash_core_components as dcc
 import dash_html_components as html
 from dash_table import DataTable, FormatTemplate
 from utils import *
-from datetime import date, timedelta
-from math import ceil
 from backtest import *
 from bloomberg_functions import req_historical_data
 import numpy as np
 from sklearn import linear_model
-from statistics import mean
 
 # Create a Dash app
 app = dash.Dash(__name__)
@@ -376,6 +373,10 @@ def update_bbg_data(nclicks, bbg_id_1, N, n, start_date, end_date):
         ]
     )
 
+    fig.update_layout(
+        title = 'wadup'
+    )
+
     return historical_data.to_json(), date_output_msg, fig, {'display': 'block'}
 
 
@@ -392,28 +393,8 @@ def update_bbg_data(nclicks, bbg_id_1, N, n, start_date, end_date):
     prevent_initial_call=True
 )
 def update_bonds_hist(n_clicks, startDate, endDate, N, n):
-    # Need to query enough days to run the backtest on every date in the
-    # range start_date to end_date
-    startDate = pd.to_datetime(startDate).date() - timedelta(
-        days=ceil((N + n) * (365 / 252))
-    )
-    startDate = startDate.strftime("%Y-%m-%d")
 
-    data_years = list(
-        range(pd.to_datetime(startDate).date().year,
-              pd.to_datetime(endDate).date().year + 1, 1)
-    )
-
-    bonds_data = fetch_usdt_rates(data_years[0])
-
-    if len(data_years) > 1:
-        for year in data_years[1:]:
-            bonds_data = pd.concat([bonds_data, fetch_usdt_rates(year)],
-                                   axis=0, ignore_index=True)
-
-    # How to filter a dataframe for rows that you want
-    bonds_data = bonds_data[bonds_data.Date >= pd.to_datetime(startDate)]
-    bonds_data = bonds_data[bonds_data.Date <= pd.to_datetime(endDate)]
+    bonds_data = usdt_cmt_rates(startDate, endDate, N, n)
 
     fig = go.Figure(
         data=[
